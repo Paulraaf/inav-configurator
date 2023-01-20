@@ -124,7 +124,7 @@ SYM.AH_AIRCRAFT4 = 0x1A6;
 SYM.AH_CROSSHAIRS = new Array(0x166, 0x1A4, new Array(0x190, 0x191, 0x192), new Array(0x193, 0x194, 0x195), new Array(0x196, 0x197, 0x198), new Array(0x199, 0x19A, 0x19B), new Array (0x19C, 0x19D, 0x19E), new Array (0x19F, 0x1A0, 0x1A1));
 
 var video_type = null;
-
+var isGuidesChecked = false;
 var FONT = FONT || {};
 
 FONT.initData = function () {
@@ -540,6 +540,7 @@ OSD.constants = {
         'NTSC',
         'HDZERO',
         'DJIWTF',
+        'AVATAR',
         'BF43COMPAT'
     ],
     VIDEO_LINES: {
@@ -547,6 +548,7 @@ OSD.constants = {
         NTSC: 13,
         HDZERO: 18,
         DJIWTF: 22,
+        AVATAR: 20,
         BF43COMPAT: 16,
     },
     VIDEO_COLS: {
@@ -554,6 +556,7 @@ OSD.constants = {
         NTSC: 30,
         HDZERO: 50,
         DJIWTF: 60,
+        AVATAR: 53,
         BF43COMPAT: 30
     },
     VIDEO_BUFFER_CHARS: {
@@ -561,6 +564,7 @@ OSD.constants = {
         NTSC: 390,
         HDZERO: 900,
         DJIWTF: 1320,
+        AVATAR: 1060,
         BF43COMPAT: 480
     },
     UNIT_TYPES: [
@@ -838,6 +842,11 @@ OSD.constants = {
                     preview: '[CRAFT_NAME]'
                 },
                 {
+                    name: 'PILOT_NAME',
+                    id: 142,PILOT_NAME
+                    preview: '[PILOT_NAME]'
+                },
+                {
                     name: 'FLYMODE',
                     id: 7,
                     preview: 'ACRO'
@@ -959,7 +968,7 @@ OSD.constants = {
                 },
                 {
                     name: 'PAN_SERVO_CENTRED',
-                    id: 142,
+                    id: 143,
                     min_version: '6.0.0',
                     preview: FONT.symbol(SYM.PAN_SERVO_IS_OFFSET_L) + '120' + FONT.symbol(SYM.DEGREES)
                 },
@@ -2107,15 +2116,20 @@ OSD.updateDisplaySize = function () {
         }
     }
 
-    // set the preview size if dji wtf
+    // set the preview size based on the video type
+    // -- AVATAR
+    $('.third_left').toggleClass('preview_avatar_side', (video_type == 'AVATAR'))
+    $('.preview').toggleClass('preview_avatar cut43_left', (video_type == 'AVATAR'))
+    $('.third_right').toggleClass('preview_avatar_side', (video_type == 'AVATAR'))
+    // -- DJI WTF
     $('.third_left').toggleClass('preview_dji_hd_side', video_type == 'DJIWTF')
     $('.preview').toggleClass('preview_dji_hd cut43_left', video_type == 'DJIWTF')
     $('.third_right').toggleClass('preview_dji_hd_side', video_type == 'DJIWTF')
-
-    // set the preview size based on the video type
+    // -- HD ZERO
     $('.third_left').toggleClass('preview_hdzero_side', (video_type == 'HDZERO'))
     $('.preview').toggleClass('preview_hdzero cut43_left', (video_type == 'HDZERO'))
     $('.third_right').toggleClass('preview_hdzero_side', (video_type == 'HDZERO'))
+    
     OSD.GUI.updateGuidesView($('#videoGuides').find('input').is(':checked'));
 };
 
@@ -2399,7 +2413,7 @@ OSD.GUI.checkAndProcessSymbolPosition = function(pos, charCode) {
     }
 };
 
-const mspVideoSystem = [1,3,4,5];   // indexes of PAL, HDZERO, DJIWTF, & BF43COMPAT
+const mspVideoSystem = [1,3,4,5,6];   // indexes of PAL, HDZERO, DJIWTF,AVATAR, & BF43COMPAT
 const analogVideoSystem = [0,1,2];  // indexes of AUTO, PAL, & NTSC
 
 OSD.GUI.updateVideoMode = function() {
@@ -2429,11 +2443,9 @@ OSD.GUI.updateVideoMode = function() {
             if (mspVideoSystem.includes(i))
             {
                 $videoTypes.append(
-                    $('<label/>')
-                    .append($('<input name="video_system" type="radio"/>' + OSD.constants.VIDEO_TYPES[i] + '</label>')
-                        .prop('checked', i === OSD.data.preferences.video_system)
+                    $('<option value="' + OSD.constants.VIDEO_TYPES[i] + '">' + OSD.constants.VIDEO_TYPES[i] + '</option>')
+                        .prop('selected', i === OSD.data.preferences.video_system)
                         .data('type', i)
-                    )
                 );
             }
         }
@@ -2442,18 +2454,16 @@ OSD.GUI.updateVideoMode = function() {
             if (analogVideoSystem.includes(i))
             {
                 $videoTypes.append(
-                    $('<label/>')
-                    .append($('<input name="video_system" type="radio"/>' + OSD.constants.VIDEO_TYPES[i] + '</label>')
-                        .prop('checked', i === OSD.data.preferences.video_system)
+                    $('<option value="' + OSD.constants.VIDEO_TYPES[i] + '">' + OSD.constants.VIDEO_TYPES[i] + '</option>')
+                        .prop('selected', i === OSD.data.preferences.video_system)
                         .data('type', i)
-                    )
                 );
             }
         }
     }
 
-    $videoTypes.find(':radio').click(function () {
-        OSD.data.preferences.video_system = $(this).data('type');
+    $videoTypes.change(function () {
+        OSD.data.preferences.video_system = $(this).find(':selected').data('type');
         OSD.updateDisplaySize();
         OSD.GUI.saveConfig();
     });
@@ -2627,9 +2637,10 @@ OSD.GUI.updateFields = function() {
     if ($('#videoGuidesToggle').length == false) {
         $('#videoGuides').prepend(
             $('<input id="videoGuidesToggle" type="checkbox" class="toggle" />')
-            .attr('checked', false)
+            .attr('checked', isGuidesChecked)
             .on('change', function () {
                 OSD.GUI.updateGuidesView(this.checked);
+                chrome.storage.local.set({'showOSDGuides': this.checked});
                 OSD.GUI.updatePreviews();
             })
         );
@@ -2649,10 +2660,10 @@ OSD.GUI.updateFields = function() {
     // needs to be called after all of them have been set up
     GUI.switchery();
 
-     // Update the OSD preview
-     refreshOSDSwitchIndicators();
-     updateCraftName();
-     updatePanServoPreview();
+    // Update the OSD preview
+    refreshOSDSwitchIndicators();
+    updatePilotAndCraftNames();
+    updatePanServoPreview();
 };
 
 OSD.GUI.removeBottomLines = function(){
@@ -2704,6 +2715,15 @@ OSD.GUI.updateGuidesView = function(on) {
     isDJIWTF = OSD.constants.VIDEO_TYPES[OSD.data.preferences.video_system] == 'DJIWTF';
     $('.hd_43_margin_left').toggleClass('dji_hd_43_left', (isDJIWTF && on))
     $('.hd_43_margin_right').toggleClass('dji_hd_43_right', (isDJIWTF && on))
+
+    isAvatar = OSD.constants.VIDEO_TYPES[OSD.data.preferences.video_system] == 'AVATAR';
+    $('.hd_43_margin_left').toggleClass('hd_avatar_43_left', (isAvatar && on))
+    $('.hd_43_margin_right').toggleClass('hd_avatar_43_right', (isAvatar && on))
+    $('.hd_avatar_bottom_bar').toggleClass('hd_avatar_bottom', (isAvatar && on))
+    $('.hd_avatar_storage_box_top').toggleClass('hd_avatar_storagebox_t', (isAvatar && on))
+    $('.hd_avatar_storage_box_bottom').toggleClass('hd_avatar_storagebox_b', (isAvatar && on))
+    $('.hd_avatar_storage_box_left').toggleClass('hd_avatar_storagebox_l', (isAvatar && on))
+    $('.hd_avatar_storage_box_right').toggleClass('hd_avatar_storagebox_r', (isAvatar && on))
 
     isPAL = OSD.constants.VIDEO_TYPES[OSD.data.preferences.video_system] == 'PAL' || OSD.constants.VIDEO_TYPES[OSD.data.preferences.video_system] == 'AUTO';
     $('.pal_ntsc_box_bottom').toggleClass('ntsc_bottom', (isPAL && on))
@@ -2842,7 +2862,7 @@ OSD.GUI.updatePreviews = function() {
 
     var centerPosition = (OSD.data.display_size.x * OSD.data.display_size.y / 2);
     if (OSD.data.display_size.y % 2 == 0) {
-        centerPosition += OSD.data.display_size.x / 2;
+        centerPosition += Math.floor(OSD.data.display_size.x / 2);
     }
 
     let hudCenterPosition = centerPosition - (OSD.constants.VIDEO_COLS[video_type] * $('#osd_horizon_offset').val());
@@ -2976,7 +2996,7 @@ OSD.GUI.updateAll = function() {
     OSD.GUI.updateUnits();
     OSD.GUI.updateFields();
     OSD.GUI.updatePreviews();
-    OSD.GUI.updateGuidesView(false);
+    OSD.GUI.updateGuidesView($('#videoGuides').find('input').is(':checked'));
     OSD.GUI.updateDjiView(OSD.data.isDjiHdFpv && !OSD.data.isMspDisplay);
 };
 
@@ -3035,6 +3055,12 @@ TABS.osd.initialize = function (callback) {
             });
         });
 
+        // Initialise guides checkbox
+        chrome.storage.local.get('showOSDGuides', function (result) {
+            if (typeof result.showOSDGuides !== 'undefined') {
+                isGuidesChecked = result.showOSDGuides;
+            }     
+        });
 
         // Setup switch indicators
         $(".osdSwitchInd_channel option").each(function() {
@@ -3084,7 +3110,21 @@ TABS.osd.initialize = function (callback) {
             }
 
             // Update the OSD preview
-            updateCraftName();
+            updatePilotAndCraftNames();
+        });
+
+        $('#pilot_name').on('keyup', function() {
+            // Make sure that the pilot name only contains A to Z, 0-9, spaces, and basic ASCII symbols
+            let testExp = new RegExp('^[A-Za-z0-9 !_,:;=@#\\%\\&\\-\\*\\^\\(\\)\\.\\+\\<\\>\\[\\]]');
+            let testText = $(this).val();
+            if (testExp.test(testText.slice(-1))) {
+                $(this).val(testText.toUpperCase());
+            } else {
+                $(this).val(testText.slice(0, -1));
+            }
+
+            // Update the OSD preview
+            updatePilotAndCraftNames();
         });
 
         // font preview window
@@ -3289,22 +3329,39 @@ function updatePanServoPreview() {
     OSD.GUI.updatePreviews();
 }
 
-function updateCraftName() {
+function updatePilotAndCraftNames() {
+    let foundPilotName = ($('#pilot_name').val() == undefined);
+    let foundCraftName = ($('#craft_name').val() == undefined);
+
     let generalGroup = OSD.constants.ALL_DISPLAY_GROUPS.filter(function(e) {
         return e.name == "osdGroupGeneral";
-      })[0];
+    })[0];
 
-
-    if ($('#craft_name').val() != undefined) {
+    if (($('#craft_name').val() != undefined) || ($('#pilot_name').val() != undefined)) {
         for (let si = 0; si < generalGroup.items.length; si++) {
             if (generalGroup.items[si].name == "CRAFT_NAME") {
-                let craftNameText = $('#craft_name').val();
+                let nameText = $('#craft_name').val();
 
-                if (craftNameText == "") {
+                if (nameText == "") {
                     generalGroup.items[si].preview = "CRAFT_NAME";
                 } else {
-                    generalGroup.items[si].preview = craftNameText;
+                    generalGroup.items[si].preview = nameText;
                 }
+                foundCraftName = true;
+            }
+
+            if (generalGroup.items[si].name == "PILOT_NAME") {
+                let nameText = $('#pilot_name').val();
+
+                if (nameText == "") {
+                    generalGroup.items[si].preview = "PILOT_NAME";
+                } else {
+                    generalGroup.items[si].preview = nameText;
+                }
+                foundPilotName = true;
+            }
+
+            if (foundCraftName && foundPilotName) {
                 break;
             }
         }
