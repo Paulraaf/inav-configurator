@@ -843,7 +843,7 @@ OSD.constants = {
                 },
                 {
                     name: 'PILOT_NAME',
-                    id: 142,PILOT_NAME
+                    id: 142,
                     preview: '[PILOT_NAME]'
                 },
                 {
