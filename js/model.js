@@ -442,6 +442,37 @@ const mixerList = [
         ]
     }, // 26
     {
+        id: 35,
+        name: 'Quad Airplane with differential thrust',
+        model: 'quad_plane',
+        image: 'airplane',
+        imageOutputsNumbers: [
+            {input: INPUT_STABILIZED_PITCH, top: 151, left: 126, colour: "#ff7f00"},
+            {input: INPUT_STABILIZED_ROLL, top: 96, left: 18, colour: "#ff0000"},
+            {input: INPUT_STABILIZED_ROLL, top: 96, left: 134, colour: "#00e000"},
+            {input: INPUT_STABILIZED_YAW, top: 126, left: 52, colour: "#00a6ff"},
+            {input: INPUT_STABILIZED_THROTTLE, top:5, left:71, colour: "#000000"},
+        ],
+        enabled: true,
+        legacy: false,
+        platform: PLATFORM_AIRPLANE,
+        hasFlaps: true,
+        motorMixer: [
+            new MotorMixRule(1.0, 0.0, 0.0, 0.3),
+            new MotorMixRule(1.0, 0.0, 0.0, 0.3),
+            new MotorMixRule(1.0, 0.0, 0.0, -0.3),
+            new MotorMixRule(1.0, 0.0, 0.0, -0.3)
+        ],
+        servoMixer: [
+            new ServoMixRule(SERVO_ELEVATOR,    INPUT_STABILIZED_PITCH, 100, 0),
+            new ServoMixRule(SERVO_FLAPPERON_1, INPUT_STABILIZED_ROLL,  100, 0),
+            /*new ServoMixRule(SERVO_FLAPPERON_1, INPUT_FEATURE_FLAPS,    100, 0),*/
+            new ServoMixRule(SERVO_FLAPPERON_2, INPUT_STABILIZED_ROLL,  100, 0),
+            /*new ServoMixRule(SERVO_FLAPPERON_2, INPUT_FEATURE_FLAPS,   -100, 0),*/
+            new ServoMixRule(SERVO_RUDDER,      INPUT_STABILIZED_YAW,   100, 0),
+        ]
+    }, // 35
+    {
         id: 28,
         name: 'Airplane V-tail',
         model: 'vtail_plane',
