@@ -444,7 +444,7 @@ const mixerList = [
     {
         id: 35,
         name: 'Quad Airplane with differential thrust',
-        model: 'quad_plane',
+        model: 'twin_plane',
         image: 'airplane',
         imageOutputsNumbers: [
             {input: INPUT_STABILIZED_PITCH, top: 151, left: 126, colour: "#ff7f00"},
